@@ -89,7 +89,7 @@
   <div class="status-item"><div class="status-dot loading" id="dot-coingecko"></div><span style="color:var(--muted)">CoinGecko</span></div>
   <div class="status-item"><div class="status-dot loading" id="dot-brapi"></div><span style="color:var(--muted)">Brapi</span></div>
   <div style="flex:1"></div>
-  <span style="color:var(--dim);">APIs 100% gratuitas · Sem chave · Delay 15min na B3</span>
+  <span style="color:var(--dim);">APIs gratuitas · 1 ticker/req · Auto-refresh: 15min</span>
 </div>
 
 <div class="grid" style="grid-template-columns:1fr;">
@@ -289,61 +289,65 @@ async function fetchCrypto(){
 }
 
 // ============ FETCH: Brapi (Ações BR) ============
+// Plano gratuito permite apenas 1 ticker por requisição
 async function fetchBrapi(){
   setStatus('brapi','loading');
-  try {
-    // Brapi com token configurado - split em 2 chamadas para respeitar limite free
-    const TOKEN = 'qtnchm9faiVeLDdhHy33Nb';
-    const batch1 = 'PETR4,VALE3,ITUB4,BBAS3,TAEE11,CMIG4,BBSE3,ITSA4';
-    const batch2 = 'SAPR4,ALUP11,BTLG11,CPTS11,KLBN4';
-    
-    const [res1, res2] = await Promise.all([
-      fetch(`https://brapi.dev/api/quote/${batch1}?token=${TOKEN}`),
-      fetch(`https://brapi.dev/api/quote/${batch2}?token=${TOKEN}`)
-    ]);
-    const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
-    
-    const results1 = (data1.results || []);
-    const results2 = (data2.results || []);
-    const data = { results: [...results1, ...results2] };
-    
-    if(data.results.length===0) throw new Error('Sem dados — verifique seu token em brapi.dev');
+  const TOKEN = 'qtnchm9faiVeLDdhHy33Nb';
+  const tickers = ['PETR4','VALE3','ITUB4','BBAS3','TAEE11','CMIG4','BBSE3','ITSA4','SAPR4','ALUP11','BTLG11','CPTS11','KLBN4'];
+  
+  let allResults = [];
+  let errors = 0;
 
-    let html='';
-    for(const stock of data.results){
-      const pct = stock.regularMarketChangePercent||0;
-      const price = stock.regularMarketPrice||0;
-      const prevClose = stock.regularMarketPreviousClose||0;
-      const name = stock.longName||stock.shortName||stock.symbol;
-      const dy = stock.dividendYield;
+  // Fetch each ticker individually (free plan = 1 per request)
+  const promises = tickers.map(ticker =>
+    fetch(`https://brapi.dev/api/quote/${ticker}?token=${TOKEN}`)
+      .then(r => r.json())
+      .then(data => {
+        if(data.results && data.results.length > 0) allResults.push(data.results[0]);
+      })
+      .catch(() => { errors++; })
+  );
 
-      html+=makeCard(
-        `🇧🇷 ${stock.symbol}`,
-        name.substring(0,30),
-        'R$ '+fmt(price,2),
-        fmt(Math.abs(pct))+'%',
-        pct,
-        dy ? `DY: ${fmt(dy,2)}% · Fech. ant: R$ ${fmt(prevClose,2)}` : `Fech. ant: R$ ${fmt(prevClose,2)}`
-      );
-    }
-    document.getElementById('brapiGrid').innerHTML=html;
-    setStatus('brapi','ok');
-  } catch(e){
+  await Promise.all(promises);
+
+  if(allResults.length === 0){
     setStatus('brapi','fail');
-    // Fallback: show message about needing token
     document.getElementById('brapiGrid').innerHTML=
-      `<div class="card data-card" style="border-left-color:var(--amber);grid-column:1/-1;padding:20px;">
-        <div class="data-ticker" style="color:var(--amber);">BRAPI — TOKEN NECESSÁRIO</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8;">
-          Para dados da B3, registre um token gratuito em <strong style="color:var(--cyan)">brapi.dev</strong> e substitua na URL do código.<br>
-          Erro: ${e.message}<br><br>
-          <span style="color:var(--dim);font-family:var(--mono);font-size:10px;">
-            Substitua a linha do fetch por:<br>
-            fetch('https://brapi.dev/api/quote/PETR4,VALE3?token=SEU_TOKEN_AQUI')
-          </span>
-        </div>
+      `<div class="card data-card" style="border-left-color:var(--down);grid-column:1/-1;padding:20px;">
+        <div class="data-ticker" style="color:var(--down);">BRAPI — ERRO</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">Nenhum dado retornado. Verifique o token ou tente novamente.</div>
       </div>`;
+    return;
   }
+
+  // Sort: biggest gainers first, then losers
+  allResults.sort((a,b) => (b.regularMarketChangePercent||0) - (a.regularMarketChangePercent||0));
+
+  let html='';
+  for(const stock of allResults){
+    const pct = stock.regularMarketChangePercent||0;
+    const price = stock.regularMarketPrice||0;
+    const prevClose = stock.regularMarketPreviousClose||0;
+    const name = stock.longName||stock.shortName||stock.symbol;
+    const high = stock.regularMarketDayHigh||0;
+    const low = stock.regularMarketDayLow||0;
+
+    html+=makeCard(
+      `🇧🇷 ${stock.symbol}`,
+      name.substring(0,30),
+      'R$ '+fmt(price,2),
+      fmt(Math.abs(pct))+'%',
+      pct,
+      `Mín: ${fmt(low,2)} · Máx: ${fmt(high,2)}`
+    );
+  }
+  
+  if(errors > 0){
+    html+=`<div style="grid-column:1/-1;font-family:var(--mono);font-size:10px;color:var(--amber);padding:4px 0;">⚠ ${errors} ticker(s) falharam</div>`;
+  }
+  
+  document.getElementById('brapiGrid').innerHTML=html;
+  setStatus('brapi','ok');
 }
 
 // ============ FETCH ALL ============
@@ -361,9 +365,10 @@ async function fetchAllData(){
   btn.textContent='↻ ATUALIZAR';
 }
 
-// Auto-refresh every 60 seconds
+// Auto-refresh every 15 minutes
+// 13 tickers × 4 updates/hora × 2h = 104 req/dia × 30 = 3.120/mês (limite: 15.000)
 fetchAllData();
-setInterval(fetchAllData, 60000);
+setInterval(fetchAllData, 900000);
 </script>
 </body>
 </html>
