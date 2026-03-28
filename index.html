@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarketDesk LIVE — Demo APIs Gratuitas</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0e14;--surface:#0f1319;--card:#141a22;--cardHover:#1a2230;
+    --border:#1c2433;--borderLight:#263044;
+    --up:#00e676;--upDim:rgba(0,230,118,0.08);--upBorder:rgba(0,230,118,0.2);
+    --down:#ff1744;--downDim:rgba(255,23,68,0.08);--downBorder:rgba(255,23,68,0.2);
+    --amber:#ffab00;--amberDim:rgba(255,171,0,0.1);
+    --cyan:#18ffff;--cyanDim:rgba(24,255,255,0.08);
+    --text:#cdd6e4;--muted:#7a8ba8;--dim:#4a5670;--accent:#448aff;
+    --mono:'JetBrains Mono','Fira Code',monospace;
+    --sans:'Barlow',-apple-system,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;min-height:100vh;}
+  ::-webkit-scrollbar{width:4px;height:4px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite;margin-right:6px;}
+  .pulse-up{background:var(--up);box-shadow:0 0 6px var(--up);}
+  .pulse-amber{background:var(--amber);box-shadow:0 0 6px var(--amber);}
+  .pulse-cyan{background:var(--cyan);box-shadow:0 0 6px var(--cyan);}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:8px;transition:all 0.2s;}
+  .card:hover{background:var(--cardHover);border-color:var(--borderLight);}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:48px;flex-wrap:wrap;gap:8px;}
+  .logo{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--cyan);letter-spacing:2px;}
+  .logo span{color:var(--muted);}
+  .logo .live{font-size:10px;color:var(--up);background:var(--upDim);border:1px solid var(--upBorder);padding:1px 6px;border-radius:3px;margin-left:8px;letter-spacing:1px;}
+  .status-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 20px;display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:10px;overflow-x:auto;}
+  .status-item{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .status-dot{width:8px;height:8px;border-radius:50%;}
+  .status-dot.ok{background:var(--up);}
+  .status-dot.fail{background:var(--down);}
+  .status-dot.loading{background:var(--amber);animation:pulse 1s infinite;}
+  .section-label{font-size:10px;font-family:var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .grid{display:grid;gap:14px;padding:16px;}
+  .grid-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+  .data-card{padding:16px 18px;border-left:3px solid var(--border);animation:fadeIn 0.4s ease both;}
+  .data-card.up{border-left-color:var(--up);}
+  .data-card.down{border-left-color:var(--down);}
+  .data-ticker{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:4px;}
+  .data-value{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-0.5px;}
+  .data-change{font-family:var(--mono);font-size:12px;font-weight:700;margin-top:4px;}
+  .data-name{font-size:11px;color:var(--muted);margin-top:2px;}
+  .data-sub{font-size:10px;color:var(--dim);margin-top:4px;font-family:var(--mono);}
+  .tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite;}
+  .api-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px;}
+  .api-title{font-family:var(--mono);font-size:12px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+  .api-url{font-family:var(--mono);font-size:10px;color:var(--dim);word-break:break-all;margin-bottom:8px;background:var(--bg);padding:6px 10px;border-radius:4px;border:1px solid var(--border);}
+  .api-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+  .api-badge{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:3px;font-weight:600;}
+  .api-badge.free{background:var(--upDim);color:var(--up);border:1px solid var(--upBorder);}
+  .api-badge.nokey{background:var(--cyanDim);color:var(--cyan);border:1px solid rgba(24,255,255,0.2);}
+  .api-badge.limit{background:var(--amberDim);color:var(--amber);border:1px solid rgba(255,171,0,0.2);}
+  .refresh-btn{background:var(--cyanDim);color:var(--cyan);border:1px solid rgba(24,255,255,0.2);border-radius:6px;padding:8px 18px;font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;letter-spacing:1px;transition:all 0.2s;}
+  .refresh-btn:hover{background:rgba(24,255,255,0.15);}
+  .refresh-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .last-update{font-family:var(--mono);font-size:10px;color:var(--dim);}
+  .footer{border-top:1px solid var(--border);padding:8px 20px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--dim);flex-wrap:wrap;gap:4px;}
+  @media(max-width:768px){.grid-cards{grid-template-columns:1fr 1fr;}.topbar{height:auto;padding:10px 12px;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="logo">◆ MARKET<span>DESK</span><span class="live">LIVE</span></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <span class="last-update" id="lastUpdate">Carregando...</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="fetchAllData()">↻ ATUALIZAR</button>
+    <span id="clock" style="font-family:var(--mono);font-size:12px;color:var(--cyan);font-weight:600;letter-spacing:1px;"></span>
+  </div>
+</div>
+
+<!-- Status Bar -->
+<div class="status-bar" id="statusBar">
+  <div class="status-item"><div class="status-dot loading" id="dot-awesomeapi"></div><span style="color:var(--muted)">AwesomeAPI</span></div>
+  <div class="status-item"><div class="status-dot loading" id="dot-coingecko"></div><span style="color:var(--muted)">CoinGecko</span></div>
+  <div class="status-item"><div class="status-dot loading" id="dot-brapi"></div><span style="color:var(--muted)">Brapi</span></div>
+  <div style="flex:1"></div>
+  <span style="color:var(--dim);">APIs 100% gratuitas · Sem chave · Delay 15min na B3</span>
+</div>
+
+<div class="grid" style="grid-template-columns:1fr;">
+
+  <!-- CÂMBIO -->
+  <div>
+    <div class="section-label"><span class="pulse pulse-up"></span>Câmbio — Tempo Real via AwesomeAPI</div>
+    <div class="grid-cards" id="forexGrid">
+      <div class="card data-card" style="border-left-color:var(--border)"><div class="data-ticker">Carregando...</div><div class="data-value"><span class="spinner"></span></div></div>
+    </div>
+  </div>
+
+  <!-- CRYPTO -->
+  <div>
+    <div class="section-label"><span class="pulse pulse-amber"></span>Crypto — Tempo Real via CoinGecko</div>
+    <div class="grid-cards" id="cryptoGrid">
+      <div class="card data-card" style="border-left-color:var(--border)"><div class="data-ticker">Carregando...</div><div class="data-value"><span class="spinner"></span></div></div>
+    </div>
+  </div>
+
+  <!-- AÇÕES BR -->
+  <div>
+    <div class="section-label"><span class="pulse pulse-cyan"></span>Ações & Índices BR — via Brapi (delay 15min)</div>
+    <div class="grid-cards" id="brapiGrid">
+      <div class="card data-card" style="border-left-color:var(--border)"><div class="data-ticker">Carregando...</div><div class="data-value"><span class="spinner"></span></div></div>
+    </div>
+  </div>
+
+  <!-- APIs INFO -->
+  <div>
+    <div class="section-label" style="margin-top:10px;">📡 APIs Utilizadas — Todas Gratuitas</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;">
+      
+      <div class="api-box">
+        <div class="api-title"><span style="color:var(--up)">●</span> AwesomeAPI <span class="api-badge free">GRÁTIS</span><span class="api-badge nokey">SEM CHAVE</span></div>
+        <div class="api-url">economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL</div>
+        <div class="api-desc">Câmbio em tempo real. Dólar, Euro, Libra, e 150+ moedas. Sem limite de requisições razoável. Dados do Banco Central e mercado interbancário. Ideal para forex.</div>
+      </div>
+
+      <div class="api-box">
+        <div class="api-title"><span style="color:var(--amber)">●</span> CoinGecko <span class="api-badge free">GRÁTIS</span><span class="api-badge nokey">SEM CHAVE</span><span class="api-badge limit">30 req/min</span></div>
+        <div class="api-url">api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,brl</div>
+        <div class="api-desc">Preços de criptomoedas em tempo real. Bitcoin, Ethereum, e 10.000+ coins. Variação 24h, volume, market cap. Limite de 30 chamadas/minuto no free tier.</div>
+      </div>
+
+      <div class="api-box">
+        <div class="api-title"><span style="color:var(--cyan)">●</span> Brapi <span class="api-badge free">GRÁTIS</span><span class="api-badge limit">15min delay</span></div>
+        <div class="api-url">brapi.dev/api/quote/PETR4,VALE3,ITUB4,BBAS3?token=SEU_TOKEN</div>
+        <div class="api-desc">Ações da B3, FIIs, ETFs, índices (Ibovespa, IFIX). Token gratuito no site. Delay de 15min. Inclui DY, P/L, variação. Até 15 tickers por chamada no free. Perfeito para o mercado brasileiro.</div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:14px;padding:16px;background:var(--cyanDim);border:1px solid rgba(24,255,255,0.15);border-radius:8px;font-size:13px;color:var(--text);line-height:1.8;">
+      <strong style="color:var(--cyan);">◆ Como usar no GitHub Pages:</strong><br>
+      1. Crie um repositório no GitHub (ex: <code style="background:var(--bg);padding:2px 6px;border-radius:3px;font-family:var(--mono);font-size:11px;">market-dashboard</code>)<br>
+      2. Suba este arquivo como <code style="background:var(--bg);padding:2px 6px;border-radius:3px;font-family:var(--mono);font-size:11px;">index.html</code><br>
+      3. Vá em Settings → Pages → Source: main branch<br>
+      4. Acesse em <code style="background:var(--bg);padding:2px 6px;border-radius:3px;font-family:var(--mono);font-size:11px;">seuuser.github.io/market-dashboard</code><br>
+      5. Para a Brapi, crie um token grátis em <code style="background:var(--bg);padding:2px 6px;border-radius:3px;font-family:var(--mono);font-size:11px;">brapi.dev</code> e substitua no código<br>
+      <br>
+      <strong style="color:var(--amber);">⚠ Limitações do free tier:</strong> AwesomeAPI e CoinGecko funcionam direto. A Brapi precisa de token (gratuito) e tem delay de 15min. Para dados real-time da B3 sem delay, seria necessário API paga (ex: B3 API, Refinitiv).
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>MARKETDESK LIVE v1.0 · Demo APIs Gratuitas · Não constitui recomendação de investimento</span>
+  <span id="footerDate"></span>
+</div>
+
+<script>
+// ============ CLOCK ============
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clock').textContent=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('footerDate').textContent='◆ '+now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// ============ HELPERS ============
+function setStatus(api, status){
+  const dot=document.getElementById('dot-'+api);
+  if(dot){dot.className='status-dot '+status;}
+}
+
+function fmt(num, decimals=2){
+  return Number(num).toLocaleString('pt-BR',{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
+}
+
+function fmtUSD(num, decimals=2){
+  return '$'+Number(num).toLocaleString('en-US',{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
+}
+
+function makeCard(ticker, name, value, change, changeNum, sub=''){
+  const dir = changeNum >= 0 ? 'up' : 'down';
+  const arrow = changeNum >= 0 ? '▲' : '▼';
+  return `<div class="card data-card ${dir}" style="animation:fadeIn 0.4s ease both;">
+    <div class="data-ticker">${ticker}</div>
+    <div class="data-value">${value}</div>
+    <div class="data-change" style="color:var(--${dir})">${arrow} ${change}</div>
+    <div class="data-name">${name}</div>
+    ${sub?`<div class="data-sub">${sub}</div>`:''}
+  </div>`;
+}
+
+function showError(containerId, msg){
+  document.getElementById(containerId).innerHTML=
+    `<div class="card data-card" style="border-left-color:var(--down);grid-column:1/-1;">
+      <div class="data-ticker" style="color:var(--down);">ERRO</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;">${msg}</div>
+    </div>`;
+}
+
+// ============ FETCH: AwesomeAPI (Câmbio) ============
+async function fetchForex(){
+  setStatus('awesomeapi','loading');
+  try {
+    const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,ARS-BRL,JPY-BRL,CNY-BRL');
+    const data = await res.json();
+    
+    const pairs = [
+      {key:'USDBRL', name:'Dólar Americano', flag:'🇺🇸'},
+      {key:'EURBRL', name:'Euro', flag:'🇪🇺'},
+      {key:'GBPBRL', name:'Libra Esterlina', flag:'🇬🇧'},
+      {key:'CNYBRL', name:'Yuan Chinês', flag:'🇨🇳'},
+      {key:'JPYBRL', name:'Iene Japonês', flag:'🇯🇵'},
+      {key:'ARSBRL', name:'Peso Argentino', flag:'🇦🇷'},
+    ];
+
+    let html='';
+    for(const p of pairs){
+      const d=data[p.key];
+      if(!d) continue;
+      const bid=parseFloat(d.bid);
+      const pct=parseFloat(d.pctChange);
+      const high=parseFloat(d.high);
+      const low=parseFloat(d.low);
+      html+=makeCard(
+        `${p.flag} ${d.code}/${d.codein}`,
+        p.name,
+        'R$ '+fmt(bid, p.key==='JPYBRL'||p.key==='ARSBRL'?4:4),
+        fmt(Math.abs(pct))+'%',
+        pct,
+        `Mín: ${fmt(low,4)} · Máx: ${fmt(high,4)}`
+      );
+    }
+    document.getElementById('forexGrid').innerHTML=html;
+    setStatus('awesomeapi','ok');
+  } catch(e){
+    setStatus('awesomeapi','fail');
+    showError('forexGrid','Não foi possível conectar à AwesomeAPI: '+e.message);
+  }
+}
+
+// ============ FETCH: CoinGecko (Crypto) ============
+async function fetchCrypto(){
+  setStatus('coingecko','loading');
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,ripple,dogecoin&vs_currencies=usd,brl&include_24hr_change=true&include_market_cap=true');
+    const data = await res.json();
+    
+    const coins=[
+      {id:'bitcoin',symbol:'BTC',name:'Bitcoin',icon:'₿'},
+      {id:'ethereum',symbol:'ETH',name:'Ethereum',icon:'Ξ'},
+      {id:'solana',symbol:'SOL',name:'Solana',icon:'◎'},
+      {id:'ripple',symbol:'XRP',name:'Ripple',icon:'✕'},
+      {id:'cardano',symbol:'ADA',name:'Cardano',icon:'♦'},
+      {id:'dogecoin',symbol:'DOGE',name:'Dogecoin',icon:'Ð'},
+    ];
+
+    let html='';
+    for(const c of coins){
+      const d=data[c.id];
+      if(!d) continue;
+      const usd=d.usd;
+      const brl=d.brl;
+      const pct=d.usd_24h_change||0;
+      const mcap=d.usd_market_cap;
+      const mcapStr = mcap>1e12?fmt(mcap/1e12,1)+'T':mcap>1e9?fmt(mcap/1e9,1)+'B':fmt(mcap/1e6,1)+'M';
+      html+=makeCard(
+        `${c.icon} ${c.symbol}/USD`,
+        c.name,
+        fmtUSD(usd, usd>100?0:2),
+        fmt(Math.abs(pct))+'%',
+        pct,
+        `R$ ${fmt(brl,2)} · MCap: $${mcapStr}`
+      );
+    }
+    document.getElementById('cryptoGrid').innerHTML=html;
+    setStatus('coingecko','ok');
+  } catch(e){
+    setStatus('coingecko','fail');
+    showError('cryptoGrid','Não foi possível conectar ao CoinGecko: '+e.message);
+  }
+}
+
+// ============ FETCH: Brapi (Ações BR) ============
+async function fetchBrapi(){
+  setStatus('brapi','loading');
+  try {
+    // Brapi com token configurado - 15.000 req/mês no plano gratuito
+    const tickers = 'PETR4,VALE3,ITUB4,BBAS3,TAEE11,CMIG4,BBSE3,ITSA4,SAPR4,ALUP11,KLBN4,GGBR4,BTAL11,CPTS11,HGLG11,BTLG11';
+    const res = await fetch(`https://brapi.dev/api/quote/${tickers}?fundamental=true&token=qtnchm9faiVeLDdhHy33Nb`);
+    const data = await res.json();
+    
+    if(!data.results || data.results.length===0) throw new Error('Sem dados — registre um token grátis em brapi.dev');
+
+    let html='';
+    for(const stock of data.results){
+      const pct = stock.regularMarketChangePercent||0;
+      const price = stock.regularMarketPrice||0;
+      const prevClose = stock.regularMarketPreviousClose||0;
+      const name = stock.longName||stock.shortName||stock.symbol;
+      const dy = stock.dividendYield;
+
+      html+=makeCard(
+        `🇧🇷 ${stock.symbol}`,
+        name.substring(0,30),
+        'R$ '+fmt(price,2),
+        fmt(Math.abs(pct))+'%',
+        pct,
+        dy ? `DY: ${fmt(dy,2)}% · Fech. ant: R$ ${fmt(prevClose,2)}` : `Fech. ant: R$ ${fmt(prevClose,2)}`
+      );
+    }
+    document.getElementById('brapiGrid').innerHTML=html;
+    setStatus('brapi','ok');
+  } catch(e){
+    setStatus('brapi','fail');
+    // Fallback: show message about needing token
+    document.getElementById('brapiGrid').innerHTML=
+      `<div class="card data-card" style="border-left-color:var(--amber);grid-column:1/-1;padding:20px;">
+        <div class="data-ticker" style="color:var(--amber);">BRAPI — TOKEN NECESSÁRIO</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8;">
+          Para dados da B3, registre um token gratuito em <strong style="color:var(--cyan)">brapi.dev</strong> e substitua na URL do código.<br>
+          Erro: ${e.message}<br><br>
+          <span style="color:var(--dim);font-family:var(--mono);font-size:10px;">
+            Substitua a linha do fetch por:<br>
+            fetch('https://brapi.dev/api/quote/PETR4,VALE3?token=SEU_TOKEN_AQUI')
+          </span>
+        </div>
+      </div>`;
+  }
+}
+
+// ============ FETCH ALL ============
+async function fetchAllData(){
+  const btn=document.getElementById('refreshBtn');
+  btn.disabled=true;
+  btn.textContent='⟳ ATUALIZANDO...';
+
+  await Promise.allSettled([fetchForex(), fetchCrypto(), fetchBrapi()]);
+
+  const now=new Date();
+  document.getElementById('lastUpdate').textContent='Atualizado: '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  
+  btn.disabled=false;
+  btn.textContent='↻ ATUALIZAR';
+}
+
+// Auto-refresh every 60 seconds
+fetchAllData();
+setInterval(fetchAllData, 60000);
+</script>
+</body>
+</html>
